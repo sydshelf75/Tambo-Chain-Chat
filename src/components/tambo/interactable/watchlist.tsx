@@ -17,6 +17,8 @@ export function Watchlist() {
     const [marketData, setMarketData] = useState<CoinGeckoMarketData[]>([]);
     const [loading, setLoading] = useState(false);
     const [newToken, setNewToken] = useState("");
+    const [error, setError] = useState("");
+    const [searching, setSearching] = useState(false);
 
     // Load from localStorage
     useEffect(() => {
@@ -49,10 +51,34 @@ export function Watchlist() {
         }
     };
 
-    const addToken = () => {
-        if (newToken && !tokens.includes(newToken.toLowerCase())) {
-            setTokens([...tokens, newToken.toLowerCase()]);
-            setNewToken("");
+    const addToken = async () => {
+        if (!newToken) return;
+
+        setError("");
+        setSearching(true);
+
+        try {
+            // First try to search for the coin to get the correct ID
+            const searchResults = await coingeckoService.searchCoins(newToken);
+
+            if (searchResults.length > 0) {
+                // Use the first result's ID (most relevant)
+                const bestMatch = searchResults[0].id;
+
+                if (tokens.includes(bestMatch)) {
+                    setError("Token already in watchlist");
+                } else {
+                    setTokens([...tokens, bestMatch]);
+                    setNewToken("");
+                }
+            } else {
+                setError("Token not found");
+            }
+        } catch (e) {
+            console.error(e);
+            setError("Failed to search token");
+        } finally {
+            setSearching(false);
         }
     };
 
@@ -72,22 +98,31 @@ export function Watchlist() {
                 <h3 className="font-semibold flex items-center gap-2 mb-3">
                     <Star className="w-4 h-4 fill-primary stroke-primary" /> Watchlist
                 </h3>
-                <div className="flex gap-2">
+                <div className="flex gap-2 relative">
                     <input
                         type="text"
-                        placeholder="Add token ID (e.g. ripple)"
-                        className="flex-1 px-3 py-1.5 text-sm rounded-md bg-background border outline-none focus:ring-1 ring-primary"
+                        placeholder="Add token (e.g. Bitcoin)"
+                        className={cn(
+                            "flex-1 px-3 py-1.5 text-sm rounded-md bg-background border outline-none focus:ring-1 ring-primary transition-colors",
+                            error ? "border-destructive focus:ring-destructive" : ""
+                        )}
                         value={newToken}
-                        onChange={(e) => setNewToken(e.target.value)}
+                        onChange={(e) => {
+                            setNewToken(e.target.value);
+                            if (error) setError("");
+                        }}
                         onKeyDown={handleKeyDown}
+                        disabled={searching}
                     />
                     <button
                         onClick={addToken}
-                        className="px-3 py-1.5 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:bg-primary/90 transition-colors"
+                        disabled={searching || !newToken}
+                        className="px-3 py-1.5 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[60px]"
                     >
-                        Add
+                        {searching ? "..." : "Add"}
                     </button>
                 </div>
+                {error && <div className="text-xs text-destructive mt-1.5 pl-1">{error}</div>}
             </div>
 
             <div className="divide-y divide-border">

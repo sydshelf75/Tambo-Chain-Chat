@@ -92,5 +92,33 @@ export const coingeckoService = {
             console.error("CoinGecko API Error:", error);
             return null;
         }
+    },
+
+    async searchCoins(query: string): Promise<{ id: string; name: string; symbol: string; thumb: string }[]> {
+        if (!query || query.length < 2) return [];
+
+        const cacheKey = `search-${query}`;
+        const cached = cache.get(cacheKey);
+
+        if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+            return cached.data;
+        }
+
+        try {
+            const response = await fetch(`${BASE_URL}/search?query=${encodeURIComponent(query)}`);
+
+            if (!response.ok) {
+                throw new Error("Failed to search coins");
+            }
+
+            const data = await response.json();
+            const coins = (data.coins || []).slice(0, 5);
+
+            cache.set(cacheKey, { data: coins, timestamp: Date.now() });
+            return coins;
+        } catch (error) {
+            console.error("CoinGecko Search Error:", error);
+            return [];
+        }
     }
 };

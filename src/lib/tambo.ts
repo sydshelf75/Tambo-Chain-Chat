@@ -1,13 +1,3 @@
-/**
- * @file tambo.ts
- * @description Central configuration file for Tambo components and tools
- *
- * This file serves as the central place to register your Tambo components and tools.
- * It exports arrays that will be used by the TamboProvider.
- *
- * Read more about Tambo at https://tambo.co/docs
- */
-
 
 import {
   PriceChart,
@@ -55,13 +45,7 @@ export const tools: TamboTool[] = [
   // Add more tools here
 ];
 
-/**
- * components
- *
- * This array contains all the Tambo components that are registered for use within the application.
- * Each component is defined with its name, description, and expected props. The components
- * can be controlled by AI to dynamically render UI elements based on user interactions.
- */
+
 export const components: TamboComponent[] = [
 
   {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
@@ -19,62 +19,45 @@ interface ChartDataPoint {
     [key: string]: number | string;
 }
 
-export function PriceChart({ tokens, timeframe = "7", title }: PriceChartProps) {
-    const [data, setData] = useState<ChartDataPoint[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export function PriceChart({ tokens = [], timeframe = "7", title }: PriceChartProps) {
+    const fetchPriceHistory = async () => {
+        const promises = tokens.map(token => coingeckoService.getPriceHistory(token, timeframe));
+        const results = await Promise.all(promises);
 
-    useEffect(() => {
-        async function fetchData() {
-            setLoading(true);
-            setError(null);
-            try {
-                const promises = tokens.map(token => coingeckoService.getPriceHistory(token, timeframe));
-                const results = await Promise.all(promises);
-
-                if (results.every(r => r === null)) {
-                    throw new Error("Failed to fetch data for all tokens");
-                }
-
-                // Process data
-                // Assume all return roughly same timestamps, align by index for simplicity or use timestamp mapping
-                // For varying lengths, a proper map by timestamp is better.
-
-                const timestampMap = new Map<number, { [key: string]: number }>();
-
-                results.forEach((res, index) => {
-                    if (!res) return;
-                    const tokenName = tokens[index];
-                    res.prices.forEach(([timestamp, price]) => {
-                        // Round timestamp to nearest hour/day to align slightly off data
-                        // For 7 days, hourly is good.
-                        const alignedTime = Math.floor(timestamp / 1000 / 60 / 60) * 1000 * 60 * 60;
-
-                        const existing = timestampMap.get(alignedTime) || {};
-                        timestampMap.set(alignedTime, { ...existing, [tokenName]: price });
-                    });
-                });
-
-                const chartData: ChartDataPoint[] = Array.from(timestampMap.entries())
-                    .sort(([a], [b]) => a - b)
-                    .map(([timestamp, values]) => ({
-                        date: new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: timeframe === '1' ? '2-digit' : undefined }),
-                        ...values,
-                    }));
-
-                setData(chartData);
-            } catch (err) {
-                console.error(err);
-                setError("Failed to load chart data");
-            } finally {
-                setLoading(false);
-            }
+        if (results.every(r => r === null)) {
+            throw new Error("Failed to fetch data for all tokens");
         }
 
-        if (tokens.length > 0) {
-            fetchData();
-        }
-    }, [tokens, timeframe]);
+        // Process data
+        const timestampMap = new Map<number, { [key: string]: number }>();
+
+        results.forEach((res, index) => {
+            if (!res) return;
+            const tokenName = tokens[index];
+            res.prices.forEach(([timestamp, price]) => {
+                // Round timestamp to nearest hour/day to align slightly off data
+                const alignedTime = Math.floor(timestamp / 1000 / 60 / 60) * 1000 * 60 * 60;
+
+                const existing = timestampMap.get(alignedTime) || {};
+                timestampMap.set(alignedTime, { ...existing, [tokenName]: price });
+            });
+        });
+
+        return Array.from(timestampMap.entries())
+            .sort(([a], [b]) => a - b)
+            .map(([timestamp, values]) => ({
+                date: new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: timeframe === '1' ? '2-digit' : undefined }),
+                ...values,
+            }));
+    };
+
+    const { data: chartData = [], isLoading: loading, error, isError } = useQuery({
+        queryKey: ['priceHistory', tokens, timeframe],
+        queryFn: fetchPriceHistory,
+        enabled: tokens.length > 0,
+        refetchOnWindowFocus: false,
+    });
+
 
     if (loading) {
         return (
@@ -84,10 +67,10 @@ export function PriceChart({ tokens, timeframe = "7", title }: PriceChartProps) 
         );
     }
 
-    if (error || data.length === 0) {
+    if (isError || (chartData.length === 0 && !loading)) {
         return (
             <div className="w-full h-64 flex items-center justify-center bg-muted/20 rounded-lg border border-destructive/20">
-                <div className="text-destructive">{error || "No data available"}</div>
+                <div className="text-destructive">{(error as Error)?.message || "No data available"}</div>
             </div>
         );
     }
@@ -108,7 +91,7 @@ export function PriceChart({ tokens, timeframe = "7", title }: PriceChartProps) 
             </div>
             <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={data}>
+                    <AreaChart data={chartData}>
                         <defs>
                             {tokens.map((token, index) => (
                                 <linearGradient key={token} id={`color-${token}`} x1="0" y1="0" x2="0" y2="1">
