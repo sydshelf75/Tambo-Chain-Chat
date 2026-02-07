@@ -7,7 +7,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 export function Header() {
     return (
-        <header className="w-full h-16 border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between px-6 transition-all duration-300">
+        <header className="w-full h-16 border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between px-6 transition-all duration-300 print:hidden">
             {/* Left Zone: Logo & Status */}
             <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2 group cursor-pointer">
