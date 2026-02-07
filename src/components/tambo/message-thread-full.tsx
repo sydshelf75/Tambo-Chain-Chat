@@ -8,7 +8,6 @@ import {
   MessageInputMcpPromptButton,
   MessageInputMcpResourceButton,
   MessageInputDictationButton,
-  MessageInputDictationButton,
   MessageInputSubmitButton,
   MessageInputTextarea,
   MessageInputToolbar,
@@ -19,8 +18,6 @@ import {
   MessageSuggestionsStatus,
 } from "@/components/tambo/message-suggestions";
 import { ScrollableMessageContainer } from "@/components/tambo/scrollable-message-container";
-
-import { ChatExportMenu } from "@/components/tambo/chat-export";
 
 import { ChatExportMenu } from "@/components/tambo/chat-export";
 import { ThreadContainer, useThreadContainerContext } from "./thread-container";
